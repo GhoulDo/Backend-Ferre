@@ -3,7 +3,7 @@ import { ProductoService } from '../services/producto.service';
 import { logger } from '../utils/logger';
 
 export class ProductoController {
-  static async getAll(req: Request, res: Response) {
+  static async getAll(req: Request, res: Response): Promise<void> {
     try {
       const productos = await ProductoService.getAll();
       res.json(productos);
@@ -13,12 +13,13 @@ export class ProductoController {
     }
   }
 
-  static async getById(req: Request, res: Response) {
+  static async getById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const producto = await ProductoService.getById(parseInt(id));
       if (!producto) {
-        return res.status(404).json({ error: 'Producto no encontrado' });
+        res.status(404).json({ error: 'Producto no encontrado' });
+        return;
       }
       res.json(producto);
     } catch (error) {
@@ -27,7 +28,7 @@ export class ProductoController {
     }
   }
 
-  static async create(req: Request, res: Response) {
+  static async create(req: Request, res: Response): Promise<void> {
     try {
       const producto = await ProductoService.create(req.body);
       logger.info('Producto creado', { productoId: producto.id, user: req.user?.userId });
@@ -38,7 +39,7 @@ export class ProductoController {
     }
   }
 
-  static async update(req: Request, res: Response) {
+  static async update(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const producto = await ProductoService.update(parseInt(id), req.body);
@@ -50,7 +51,7 @@ export class ProductoController {
     }
   }
 
-  static async delete(req: Request, res: Response) {
+  static async delete(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       await ProductoService.delete(parseInt(id));
@@ -62,7 +63,7 @@ export class ProductoController {
     }
   }
 
-  static async getLowStock(req: Request, res: Response) {
+  static async getLowStock(req: Request, res: Response): Promise<void> {
     try {
       const productos = await ProductoService.getLowStock();
       res.json(productos);
@@ -72,8 +73,7 @@ export class ProductoController {
     }
   }
 
-  // Nuevo endpoint para estadísticas
-  static async getStats(req: Request, res: Response) {
+  static async getStats(req: Request, res: Response): Promise<void> {
     try {
       const stats = await ProductoService.getProductStats();
       res.json(stats);

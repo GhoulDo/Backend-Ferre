@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { VentaService } from '../services/venta.service';
 
 export class VentaController {
-  static async getAll(req: Request, res: Response) {
+  static async getAll(req: Request, res: Response): Promise<void> {
     try {
       const ventas = await VentaService.getAll();
       res.json(ventas);
@@ -12,12 +12,13 @@ export class VentaController {
     }
   }
 
-  static async getById(req: Request, res: Response) {
+  static async getById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const venta = await VentaService.getById(parseInt(id));
       if (!venta) {
-        return res.status(404).json({ error: 'Venta no encontrada' });
+        res.status(404).json({ error: 'Venta no encontrada' });
+        return;
       }
       res.json(venta);
     } catch (error) {
@@ -26,7 +27,7 @@ export class VentaController {
     }
   }
 
-  static async create(req: Request, res: Response) {
+  static async create(req: Request, res: Response): Promise<void> {
     try {
       const usuarioId = req.user!.userId;
       const venta = await VentaService.create(req.body, usuarioId);
@@ -34,13 +35,14 @@ export class VentaController {
     } catch (error: any) {
       console.error('Error al crear venta:', error);
       if (error.message.includes('Stock insuficiente')) {
-        return res.status(400).json({ error: error.message });
+        res.status(400).json({ error: error.message });
+        return;
       }
       res.status(500).json({ error: 'Error al crear venta' });
     }
   }
 
-  static async getStats(req: Request, res: Response) {
+  static async getStats(req: Request, res: Response): Promise<void> {
     try {
       const stats = await VentaService.getVentasStats();
       res.json(stats);
@@ -50,14 +52,15 @@ export class VentaController {
     }
   }
 
-  static async getByDateRange(req: Request, res: Response) {
+  static async getByDateRange(req: Request, res: Response): Promise<void> {
     try {
       const { fechaInicio, fechaFin } = req.query;
       
       if (!fechaInicio || !fechaFin) {
-        return res.status(400).json({ 
+        res.status(400).json({ 
           error: 'Se requieren fechaInicio y fechaFin como parámetros' 
         });
+        return;
       }
 
       const ventas = await VentaService.getVentasByDateRange(

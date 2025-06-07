@@ -3,22 +3,19 @@ import { ClienteService } from '../services/cliente.service';
 import { logger } from '../utils/logger';
 
 export class ClienteController {
-  static async getAll(req: Request, res: Response) {
+  static async getAll(req: Request, res: Response): Promise<void> {
     try {
       const { limit, search, simple } = req.query;
       
       let clientes;
       if (simple === 'true') {
-        // Para dropdowns, usar método optimizado
         clientes = await ClienteService.getAllSimple();
       } else if (search) {
-        // Búsqueda con término
         clientes = await ClienteService.search(
           search as string, 
           parseInt(limit as string) || 20
         );
       } else {
-        // Lista completa
         clientes = await ClienteService.getAll();
       }
       
@@ -29,13 +26,14 @@ export class ClienteController {
     }
   }
 
-  static async getById(req: Request, res: Response) {
+  static async getById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const cliente = await ClienteService.getById(parseInt(id));
       
       if (!cliente) {
-        return res.status(404).json({ error: 'Cliente no encontrado' });
+        res.status(404).json({ error: 'Cliente no encontrado' });
+        return;
       }
       
       res.json(cliente);
@@ -45,7 +43,7 @@ export class ClienteController {
     }
   }
 
-  static async create(req: Request, res: Response) {
+  static async create(req: Request, res: Response): Promise<void> {
     try {
       const cliente = await ClienteService.create(req.body);
       logger.info('Cliente creado', { clienteId: cliente.id, user: req.user?.userId });
@@ -54,17 +52,18 @@ export class ClienteController {
       logger.error('Error al crear cliente', { error, data: req.body, user: req.user?.userId });
       
       if (error.code === 'P2002') {
-        return res.status(409).json({ 
+        res.status(409).json({ 
           error: 'Ya existe un cliente con ese correo electrónico',
           field: 'correo'
         });
+        return;
       }
       
       res.status(500).json({ error: 'Error al crear cliente' });
     }
   }
 
-  static async update(req: Request, res: Response) {
+  static async update(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const cliente = await ClienteService.update(parseInt(id), req.body);
@@ -74,21 +73,23 @@ export class ClienteController {
       logger.error('Error al actualizar cliente', { error, clienteId: req.params.id });
       
       if (error.code === 'P2002') {
-        return res.status(409).json({ 
+        res.status(409).json({ 
           error: 'Ya existe un cliente con ese correo electrónico',
           field: 'correo'
         });
+        return;
       }
       
       if (error.code === 'P2025') {
-        return res.status(404).json({ error: 'Cliente no encontrado' });
+        res.status(404).json({ error: 'Cliente no encontrado' });
+        return;
       }
       
       res.status(500).json({ error: 'Error al actualizar cliente' });
     }
   }
 
-  static async delete(req: Request, res: Response) {
+  static async delete(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       await ClienteService.delete(parseInt(id));
@@ -98,22 +99,23 @@ export class ClienteController {
       logger.error('Error al eliminar cliente', { error, clienteId: req.params.id });
       
       if (error.message.includes('ventas asociadas')) {
-        return res.status(400).json({ 
+        res.status(400).json({ 
           error: error.message,
           code: 'CLIENT_HAS_SALES'
         });
+        return;
       }
       
       if (error.code === 'P2025') {
-        return res.status(404).json({ error: 'Cliente no encontrado' });
+        res.status(404).json({ error: 'Cliente no encontrado' });
+        return;
       }
       
       res.status(500).json({ error: 'Error al eliminar cliente' });
     }
   }
 
-  // Nuevo endpoint para estadísticas de clientes
-  static async getStats(req: Request, res: Response) {
+  static async getStats(req: Request, res: Response): Promise<void> {
     try {
       const stats = await ClienteService.getClienteStats();
       res.json(stats);

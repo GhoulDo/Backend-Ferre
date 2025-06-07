@@ -3,15 +3,9 @@ import { CategoriaService } from '../services/categoria.service';
 import { logger } from '../utils/logger';
 
 export class CategoriaController {
-  static async getAll(req: Request, res: Response) {
+  static async getAll(req: Request, res: Response): Promise<void> {
     try {
-      const { simple } = req.query;
-      
-      // Si solo se necesitan nombres (para dropdowns), usar método optimizado
-      const categorias = simple === 'true' 
-        ? await CategoriaService.getAllSimple()
-        : await CategoriaService.getAll();
-      
+      const categorias = await CategoriaService.getAll();
       res.json(categorias);
     } catch (error) {
       logger.error('Error al obtener categorías', { error, user: req.user?.userId });
@@ -19,13 +13,14 @@ export class CategoriaController {
     }
   }
 
-  static async getById(req: Request, res: Response) {
+  static async getById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const categoria = await CategoriaService.getById(parseInt(id));
       
       if (!categoria) {
-        return res.status(404).json({ error: 'Categoría no encontrada' });
+        res.status(404).json({ error: 'Categoría no encontrada' });
+        return;
       }
       
       res.json(categoria);
@@ -35,7 +30,7 @@ export class CategoriaController {
     }
   }
 
-  static async create(req: Request, res: Response) {
+  static async create(req: Request, res: Response): Promise<void> {
     try {
       const categoria = await CategoriaService.create(req.body);
       logger.info('Categoría creada', { categoriaId: categoria.id, user: req.user?.userId });
@@ -44,17 +39,18 @@ export class CategoriaController {
       logger.error('Error al crear categoría', { error, data: req.body, user: req.user?.userId });
       
       if (error.code === 'P2002') {
-        return res.status(409).json({ 
+        res.status(409).json({ 
           error: 'Ya existe una categoría con ese nombre',
           field: 'nombre'
         });
+        return;
       }
       
       res.status(500).json({ error: 'Error al crear categoría' });
     }
   }
 
-  static async update(req: Request, res: Response) {
+  static async update(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const categoria = await CategoriaService.update(parseInt(id), req.body);
@@ -64,21 +60,23 @@ export class CategoriaController {
       logger.error('Error al actualizar categoría', { error, categoriaId: req.params.id });
       
       if (error.code === 'P2002') {
-        return res.status(409).json({ 
+        res.status(409).json({ 
           error: 'Ya existe una categoría con ese nombre',
           field: 'nombre'
         });
+        return;
       }
       
       if (error.code === 'P2025') {
-        return res.status(404).json({ error: 'Categoría no encontrada' });
+        res.status(404).json({ error: 'Categoría no encontrada' });
+        return;
       }
       
       res.status(500).json({ error: 'Error al actualizar categoría' });
     }
   }
 
-  static async delete(req: Request, res: Response) {
+  static async delete(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       await CategoriaService.delete(parseInt(id));
@@ -87,15 +85,17 @@ export class CategoriaController {
     } catch (error: any) {
       logger.error('Error al eliminar categoría', { error, categoriaId: req.params.id });
       
-      if (error.message.includes('productos asociados')) {
-        return res.status(400).json({ 
-          error: error.message,
+      if (error.code === 'P2003') {
+        res.status(400).json({ 
+          error: 'No se puede eliminar la categoría porque tiene productos asociados',
           code: 'CATEGORY_HAS_PRODUCTS'
         });
+        return;
       }
       
       if (error.code === 'P2025') {
-        return res.status(404).json({ error: 'Categoría no encontrada' });
+        res.status(404).json({ error: 'Categoría no encontrada' });
+        return;
       }
       
       res.status(500).json({ error: 'Error al eliminar categoría' });

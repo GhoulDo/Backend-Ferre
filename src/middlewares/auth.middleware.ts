@@ -9,12 +9,13 @@ declare global {
   }
 }
 
-export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Token de acceso requerido' });
+    res.status(401).json({ error: 'Token de acceso requerido' });
+    return;
   }
 
   try {
@@ -23,37 +24,42 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     next();
   } catch (error: any) {
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expirado' });
+      res.status(401).json({ error: 'Token expirado' });
+      return;
     }
     if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Token inválido' });
+      res.status(401).json({ error: 'Token inválido' });
+      return;
     }
-    return res.status(401).json({ error: 'Error de autenticación' });
+    res.status(401).json({ error: 'Error de autenticación' });
   }
 };
 
 export const requireRole = (roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Usuario no autenticado' });
+      res.status(401).json({ error: 'Usuario no autenticado' });
+      return;
     }
 
     if (!roles.includes(req.user.rol)) {
-      return res.status(403).json({ error: 'No tienes permisos para esta acción' });
+      res.status(403).json({ error: 'No tienes permisos para esta acción' });
+      return;
     }
 
     next();
   };
 };
 
-// Middleware optimizado para verificación rápida de admin
-export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+export const requireAdmin = (req: Request, res: Response, next: NextFunction): void => {
   if (!req.user) {
-    return res.status(401).json({ error: 'Usuario no autenticado' });
+    res.status(401).json({ error: 'Usuario no autenticado' });
+    return;
   }
 
   if (req.user.rol !== 'admin') {
-    return res.status(403).json({ error: 'Se requieren permisos de administrador' });
+    res.status(403).json({ error: 'Se requieren permisos de administrador' });
+    return;
   }
 
   next();

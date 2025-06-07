@@ -14,7 +14,7 @@
     "sourceMap": false,
     "removeComments": true,
     "noImplicitAny": true,
-    "noImplicitReturns": true,
+    "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
@@ -32,8 +32,6 @@
     "node_modules",
     "dist",
     "**/*.test.ts",
-    "**/*.spec.ts",
-    "src/utils/performance.ts",
-    "src/**/*.performance.*"
+    "**/*.spec.ts"
   ]
 }

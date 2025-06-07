@@ -4,18 +4,20 @@ import { comparePassword } from '../utils/hash';
 import { generateToken } from '../utils/jwt';
 
 export class UsuarioController {
-  static async login(req: Request, res: Response) {
+  static async login(req: Request, res: Response): Promise<void> {
     try {
       const { correo, contrasena } = req.body;
       
       const usuario = await UsuarioService.getByEmail(correo);
       if (!usuario || !usuario.activo) {
-        return res.status(401).json({ error: 'Credenciales inválidas' });
+        res.status(401).json({ error: 'Credenciales inválidas' });
+        return;
       }
 
       const isValidPassword = await comparePassword(contrasena, usuario.contrasena);
       if (!isValidPassword) {
-        return res.status(401).json({ error: 'Credenciales inválidas' });
+        res.status(401).json({ error: 'Credenciales inválidas' });
+        return;
       }
 
       const token = generateToken({
