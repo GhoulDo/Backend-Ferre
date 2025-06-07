@@ -1,6 +1,6 @@
 # Backend Ferretería
 
-Backend RESTful para gestión de ferretería con TypeScript, Prisma y PostgreSQL, optimizado para despliegue en Render.
+Backend RESTful para gestión de ferretería con TypeScript, Prisma y PostgreSQL, optimizado para despliegue en Render con sistema keep-alive.
 
 ## 🚀 Instalación Local
 
@@ -56,13 +56,20 @@ NODE_ENV=production
 PORT=10000
 ```
 
-3. **Configurar Auto-Deploy desde Git**
+## 🔄 Sistema Keep-Alive
 
-### Build Commands para Render:
-```bash
-# Comando de build completo
-npm install && npm run build && npx prisma migrate deploy && npx prisma generate
-```
+El proyecto incluye un sistema automático para mantener el servicio activo en Render:
+
+- **Auto-ping cada 14 minutos** para evitar suspensión del servicio gratuito
+- **Health checks inteligentes** que verifican la base de datos
+- **Monitoreo de recursos** (memoria, uptime)
+- **Tareas de mantenimiento** programadas
+
+### Endpoints de monitoreo:
+- `GET /health` - Estado de salud del sistema
+- `GET /ping` - Ping simple
+- `GET /api/sistema/stats` - Estadísticas del sistema (Admin)
+- `POST /api/sistema/keep-alive/ping` - Ping manual (Admin)
 
 ## 📋 Endpoints de la API
 
@@ -72,10 +79,11 @@ npm install && npm run build && npx prisma migrate deploy && npx prisma generate
 ### Productos
 - `GET /api/productos` - Listar productos
 - `GET /api/productos/:id` - Obtener producto por ID
+- `GET /api/productos/stats` - Estadísticas de productos (Admin)
+- `GET /api/productos/low-stock` - Productos con stock bajo
 - `POST /api/productos` - Crear producto (Admin)
 - `PUT /api/productos/:id` - Actualizar producto (Admin)
 - `DELETE /api/productos/:id` - Eliminar producto (Admin)
-- `GET /api/productos/low-stock` - Productos con stock bajo
 
 ### Categorías
 - `GET /api/categorias` - Listar categorías
@@ -100,9 +108,14 @@ npm install && npm run build && npx prisma migrate deploy && npx prisma generate
 ### Ventas
 - `GET /api/ventas` - Listar ventas
 - `GET /api/ventas/:id` - Obtener venta por ID
-- `POST /api/ventas` - Crear venta
 - `GET /api/ventas/stats` - Estadísticas de ventas (Admin)
 - `GET /api/ventas/range` - Ventas por rango de fechas
+- `POST /api/ventas` - Crear venta
+
+### Sistema (Admin)
+- `GET /api/sistema/stats` - Estadísticas del servidor
+- `GET /api/sistema/keep-alive/status` - Estado del keep-alive
+- `POST /api/sistema/keep-alive/ping` - Ping manual
 
 ## 🔑 Credenciales por defecto
 - **Email:** admin@ferreteria.com
@@ -116,6 +129,7 @@ npm install && npm run build && npx prisma migrate deploy && npx prisma generate
 - Hash de contraseñas con bcrypt
 - JWT para autenticación
 - Sanitización de inputs
+- Sistema keep-alive seguro
 
 ## 🗄️ Base de datos
 
@@ -135,15 +149,26 @@ El proyecto usa PostgreSQL con Prisma ORM. Las migraciones se ejecutan automáti
 npm run dev          # Desarrollo con hot-reload
 npm run build        # Compilar TypeScript
 npm start            # Ejecutar en producción
+npm run health       # Verificar estado del servidor
 npm run prisma:generate   # Generar cliente Prisma
 npm run prisma:migrate    # Ejecutar migraciones
 ```
 
-## 📊 Monitoreo
+## 📊 Monitoreo en Producción
 
-- **Health Check:** `/health`
-- **Info de API:** `/`
+- Health checks automáticos cada 14 minutos
 - Logs estructurados para debugging
+- Monitoreo de memoria y uptime
+- Alertas de rendimiento
+- Tareas de mantenimiento automáticas
+
+## 🚀 Características del Keep-Alive
+
+- ✅ **Previene suspensión** del servicio gratuito en Render
+- ✅ **Verificación de salud** de base de datos en cada ping
+- ✅ **Logs inteligentes** que no saturan el sistema
+- ✅ **Reintentos automáticos** en caso de fallo
+- ✅ **Monitoreo de rendimiento** incluido
 
 ## 🤝 Contribución
 

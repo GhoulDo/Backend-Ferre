@@ -9,10 +9,15 @@ import categoriaRoutes from './routes/categoria.routes';
 import clienteRoutes from './routes/cliente.routes';
 import usuarioRoutes from './routes/usuario.routes';
 import ventaRoutes from './routes/venta.routes';
+import sistemaRoutes from './routes/sistema.routes';
 
 // Importar middlewares
 import { errorHandler, notFoundHandler } from './middlewares/error.middleware';
 import { generalLimiter, sanitizeInput } from './middlewares/security.middleware';
+
+// Importar keep-alive y scheduler
+import { keepAlive } from './utils/keep-alive';
+import { scheduler, scheduleMaintenanceTasks } from './utils/scheduler';
 
 // Configurar variables de entorno
 dotenv.config();
@@ -94,21 +99,45 @@ app.get('/health', async (req, res) => {
     // Verificar conexión a la base de datos
     await prisma.$queryRaw`SELECT 1`;
     
-    res.json({ 
+    const healthData = {
       status: 'OK', 
       message: 'Backend Ferretería funcionando correctamente',
       timestamp: new Date().toISOString(),
       version: '1.0.0',
       environment: NODE_ENV,
-      database: 'connected'
-    });
+      database: 'connected',
+      uptime: process.uptime(),
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
+      }
+    };
+
+    // Log solo si no es un ping automático
+    const userAgent = req.get('User-Agent') || '';
+    if (!userAgent.includes('node') && NODE_ENV === 'production') {
+      console.log(`🏥 Health check - ${healthData.timestamp}`);
+    }
+    
+    res.json(healthData);
   } catch (error) {
+    console.error('❌ Health check failed:', error);
     res.status(503).json({
       status: 'ERROR',
       message: 'Error de conexión a la base de datos',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
     });
   }
+});
+
+// Endpoint adicional para monitoreo
+app.get('/ping', (req, res) => {
+  res.json({
+    pong: true,
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime())
+  });
 });
 
 // Endpoint de información básica
@@ -134,6 +163,7 @@ app.use('/api/categorias', categoriaRoutes);
 app.use('/api/clientes', clienteRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/ventas', ventaRoutes);
+app.use('/api/sistema', sistemaRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);
@@ -219,6 +249,13 @@ async function startServer() {
       
       if (NODE_ENV === 'production') {
         console.log(`🌐 URL producción: https://backend-ferre.onrender.com`);
+        
+        // Iniciar servicios de mantenimiento
+        setTimeout(() => {
+          keepAlive.start();
+          scheduleMaintenanceTasks();
+          console.log('🔧 Servicios de mantenimiento iniciados');
+        }, 30000); // Esperar 30 segundos después del inicio
       }
     });
 
@@ -240,6 +277,10 @@ const gracefulShutdown = async (signal: string) => {
   console.log(`\n🛑 Recibida señal ${signal}. Cerrando servidor gracefully...`);
   
   try {
+    // Detener servicios de mantenimiento
+    keepAlive.stop();
+    scheduler.cancelAllTasks();
+    
     await prisma.$disconnect();
     console.log('✅ Conexión a base de datos cerrada');
     process.exit(0);
