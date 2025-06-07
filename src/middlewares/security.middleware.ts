@@ -1,103 +1,92 @@
+import rateLimit from 'express-rate-limit';
 import { Request, Response, NextFunction } from 'express';
 
-// Middleware simple para limitar login (sin dependencias externas)
-const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
-
-export const loginLimiter = (req: Request, res: Response, next: NextFunction) => {
-  const ip = req.ip || req.connection.remoteAddress || 'unknown';
-  const now = Date.now();
-  const windowMs = 15 * 60 * 1000; // 15 minutos
-  const maxAttempts = 5;
-
-  const attempt = loginAttempts.get(ip);
-  
-  if (attempt) {
-    if (now - attempt.lastAttempt > windowMs) {
-      // Reset después del tiempo límite
-      loginAttempts.set(ip, { count: 1, lastAttempt: now });
-    } else if (attempt.count >= maxAttempts) {
-      return res.status(429).json({
-        error: 'Demasiados intentos de login. Intenta de nuevo en 15 minutos.'
-      });
-    } else {
-      attempt.count++;
-      attempt.lastAttempt = now;
-    }
-  } else {
-    loginAttempts.set(ip, { count: 1, lastAttempt: now });
+// Rate limiting optimizado para producción
+export const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Más permisivo en dev
+  message: {
+    error: 'Demasiadas peticiones desde esta IP, intenta de nuevo más tarde.',
+    retryAfter: '15 minutos'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Solo aplicar en rutas que no sean health checks
+  skip: (req) => {
+    const skipPaths = ['/health', '/ping'];
+    return skipPaths.some(path => req.path.startsWith(path));
   }
+});
 
+// Rate limiting específico para login
+export const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Solo 5 intentos de login por IP cada 15 minutos
+  message: {
+    error: 'Demasiados intentos de login. Intenta de nuevo en 15 minutos.',
+    code: 'TOO_MANY_LOGIN_ATTEMPTS'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Sanitización básica de inputs
+export const sanitizeInput = (req: Request, res: Response, next: NextFunction) => {
+  if (req.body) {
+    // Función recursiva para limpiar objetos
+    const sanitize = (obj: any): any => {
+      if (typeof obj === 'string') {
+        return obj.trim().replace(/[<>]/g, ''); // Remover caracteres peligrosos básicos
+      }
+      if (typeof obj === 'object' && obj !== null) {
+        const sanitized: any = {};
+        for (const key in obj) {
+          if (obj.hasOwnProperty(key)) {
+            sanitized[key] = sanitize(obj[key]);
+          }
+        }
+        return sanitized;
+      }
+      return obj;
+    };
+
+    req.body = sanitize(req.body);
+  }
   next();
 };
 
-// Middleware simple para rate limiting general
-const requestCounts = new Map<string, { count: number; resetTime: number }>();
-
-export const generalLimiter = (req: Request, res: Response, next: NextFunction) => {
-  const ip = req.ip || req.connection.remoteAddress || 'unknown';
-  const now = Date.now();
-  const windowMs = 15 * 60 * 1000; // 15 minutos
-  const maxRequests = 100;
-
-  const requestData = requestCounts.get(ip);
-  
-  if (requestData) {
-    if (now > requestData.resetTime) {
-      // Reset después del tiempo límite
-      requestCounts.set(ip, { count: 1, resetTime: now + windowMs });
-    } else if (requestData.count >= maxRequests) {
-      return res.status(429).json({
-        error: 'Demasiadas peticiones. Intenta de nuevo más tarde.'
-      });
-    } else {
-      requestData.count++;
-    }
-  } else {
-    requestCounts.set(ip, { count: 1, resetTime: now + windowMs });
-  }
-
-  next();
-};
-
-// Middleware para validar parámetros numéricos
+// Validación de parámetros numéricos
 export const validateNumericParam = (paramName: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const param = req.params[paramName];
-    const numericParam = parseInt(param);
+    const value = req.params[paramName];
+    const numericValue = parseInt(value, 10);
     
-    if (isNaN(numericParam) || numericParam <= 0) {
-      return res.status(400).json({ 
-        error: `El parámetro ${paramName} debe ser un número válido mayor a 0` 
+    if (isNaN(numericValue) || numericValue <= 0) {
+      return res.status(400).json({
+        error: `El parámetro ${paramName} debe ser un número válido mayor que 0`,
+        received: value
       });
     }
     
+    // Almacenar el valor parseado para evitar conversiones repetidas
+    req.params[paramName] = numericValue.toString();
     next();
   };
 };
 
-// Middleware para limpiar datos de entrada
-export const sanitizeInput = (req: Request, res: Response, next: NextFunction) => {
-  const sanitizeString = (str: string) => {
-    return str.toString().trim();
-  };
-
-  const sanitizeObject = (obj: any): any => {
-    if (typeof obj === 'string') {
-      return sanitizeString(obj);
+// Middleware para comprimir responses grandes
+export const compressionMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  const originalSend = res.send;
+  
+  res.send = function(data: any) {
+    // Solo comprimir responses grandes (>1KB) en producción
+    if (process.env.NODE_ENV === 'production' && 
+        typeof data === 'string' && 
+        data.length > 1024) {
+      res.setHeader('Content-Encoding', 'gzip');
     }
-    if (typeof obj === 'object' && obj !== null) {
-      const sanitized: any = {};
-      for (const key in obj) {
-        sanitized[key] = sanitizeObject(obj[key]);
-      }
-      return sanitized;
-    }
-    return obj;
+    return originalSend.call(this, data);
   };
-
-  if (req.body) {
-    req.body = sanitizeObject(req.body);
-  }
   
   next();
 };

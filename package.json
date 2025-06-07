@@ -1,7 +1,7 @@
 {
   "name": "backend-ferre",
   "version": "1.0.0",
-  "description": "Backend de ferretería con TypeScript, Prisma y PostgreSQL, listo para Render",
+  "description": "Backend de ferretería con TypeScript, Prisma y PostgreSQL, desplegado en Render",
   "main": "dist/index.js",
   "engines": {
     "node": ">=18.0.0",
@@ -19,18 +19,24 @@
     "prisma:reset": "prisma migrate reset --force",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "health": "curl http://localhost:4000/health",
+    "health": "curl https://backend-ferre.onrender.com/health",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["ferreteria", "backend", "typescript", "prisma", "postgresql", "render"],
+  "keywords": ["ferreteria", "backend", "typescript", "prisma", "postgresql", "render", "deployed"],
   "author": "",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GhoulDo/Backend-Ferre.git"
+  },
+  "homepage": "https://backend-ferre.onrender.com",
   "dependencies": {
     "@prisma/client": "^5.7.1",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
     "jsonwebtoken": "^9.0.2",
     "zod": "^3.22.4"
   },

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
@@ -23,7 +23,6 @@ import { scheduler, scheduleMaintenanceTasks } from './utils/scheduler';
 dotenv.config();
 
 const app = express();
-// Corregir: convertir PORT a número
 const PORT = parseInt(process.env.PORT || '4000', 10);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
@@ -38,40 +37,42 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
-// Configurar Prisma con configuraciones optimizadas para Render
+// Configurar Prisma
 const prisma = new PrismaClient({
   datasources: {
     db: {
       url: process.env.DATABASE_URL
     }
   },
-  log: NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error']
+  log: NODE_ENV === 'development' ? ['error', 'warn'] : ['error']
 });
 
-// Configuración de CORS más específica
+// Configuración de CORS
 const corsOptions = {
   origin: NODE_ENV === 'production' 
     ? [
         'https://backend-ferre.onrender.com',
         'https://frontend-ferre.onrender.com',
-        /\.onrender\.com$/
+        /\.onrender\.com$/,
+        /\.vercel\.app$/
       ]
     : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:8080'],
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  maxAge: 86400
 };
 
-// Configurar trust proxy para Render
+// Configurar trust proxy
 app.set('trust proxy', 1);
 
-// Middlewares de seguridad
+// Middlewares básicos
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
-// Solo aplicar rate limiting en producción
+// Rate limiting solo en producción
 if (NODE_ENV === 'production') {
   app.use(generalLimiter);
 }
@@ -79,13 +80,12 @@ if (NODE_ENV === 'production') {
 app.use(sanitizeInput);
 
 // Headers de seguridad
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   
-  // Headers adicionales para producción
   if (NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
@@ -93,11 +93,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// Ruta de salud mejorada para Render
-app.get('/health', async (req, res) => {
+// Health check
+app.get('/health', async (req: Request, res: Response) => {
   try {
-    // Verificar conexión a la base de datos
-    await prisma.$queryRaw`SELECT 1`;
+    const userAgent = req.get('User-Agent') || '';
+    const isAutoPing = userAgent.includes('node') || userAgent.includes('curl');
+    
+    let dbStatus = 'connected';
+    if (!isAutoPing) {
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+      } catch {
+        dbStatus = 'error';
+      }
+    }
     
     const healthData = {
       status: 'OK', 
@@ -105,20 +114,14 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       version: '1.0.0',
       environment: NODE_ENV,
-      database: 'connected',
-      uptime: process.uptime(),
+      database: dbStatus,
+      uptime: Math.floor(process.uptime()),
       memory: {
         used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
         total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
       }
     };
 
-    // Log solo si no es un ping automático
-    const userAgent = req.get('User-Agent') || '';
-    if (!userAgent.includes('node') && NODE_ENV === 'production') {
-      console.log(`🏥 Health check - ${healthData.timestamp}`);
-    }
-    
     res.json(healthData);
   } catch (error) {
     console.error('❌ Health check failed:', error);
@@ -126,21 +129,21 @@ app.get('/health', async (req, res) => {
       status: 'ERROR',
       message: 'Error de conexión a la base de datos',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime()
+      uptime: Math.floor(process.uptime())
     });
   }
 });
 
-// Endpoint adicional para monitoreo
+// Ping ultra-rápido
 app.get('/ping', (req, res) => {
   res.json({
     pong: true,
-    timestamp: new Date().toISOString(),
+    timestamp: Date.now(),
     uptime: Math.floor(process.uptime())
   });
 });
 
-// Endpoint de información básica
+// Endpoint de información optimizado
 app.get('/', (req, res) => {
   res.json({
     api: 'Backend Ferretería API',
@@ -157,7 +160,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Rutas de la API
+// Rutas de la API con prefijos
 app.use('/api/productos', productoRoutes);
 app.use('/api/categorias', categoriaRoutes);
 app.use('/api/clientes', clienteRoutes);
@@ -167,8 +170,6 @@ app.use('/api/sistema', sistemaRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);
-
-// Ruta 404
 app.use('*', notFoundHandler);
 
 // Función para inicializar la base de datos
@@ -184,6 +185,7 @@ async function initializeDatabase() {
       console.log('✅ Tablas de base de datos verificadas');
     } catch (error) {
       console.log('⚠️  Las tablas no existen, ejecuta las migraciones de Prisma');
+      console.log('   Comando: npx prisma migrate deploy');
     }
     
     // Crear usuario admin por defecto si no existe
@@ -224,7 +226,6 @@ async function initializeDatabase() {
   } catch (error) {
     console.error('❌ Error al conectar con la base de datos:', error);
     
-    // En producción, reintentar conexión
     if (NODE_ENV === 'production') {
       console.log('🔄 Reintentando conexión en 5 segundos...');
       setTimeout(initializeDatabase, 5000);
@@ -277,10 +278,8 @@ const gracefulShutdown = async (signal: string) => {
   console.log(`\n🛑 Recibida señal ${signal}. Cerrando servidor gracefully...`);
   
   try {
-    // Detener servicios de mantenimiento
     keepAlive.stop();
     scheduler.cancelAllTasks();
-    
     await prisma.$disconnect();
     console.log('✅ Conexión a base de datos cerrada');
     process.exit(0);
@@ -292,13 +291,13 @@ const gracefulShutdown = async (signal: string) => {
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-process.on('beforeExit', async () => {
-  await prisma.$disconnect();
-});
 
 // Manejo de errores no capturados
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  if (NODE_ENV === 'production') {
+    gracefulShutdown('unhandledRejection');
+  }
 });
 
 process.on('uncaughtException', (error) => {

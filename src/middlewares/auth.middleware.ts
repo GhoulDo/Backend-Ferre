@@ -21,8 +21,14 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     const user = verifyToken(token);
     req.user = user;
     next();
-  } catch (error) {
-    return res.status(403).json({ error: 'Token inválido' });
+  } catch (error: any) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expirado' });
+    }
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Token inválido' });
+    }
+    return res.status(401).json({ error: 'Error de autenticación' });
   }
 };
 
@@ -38,4 +44,17 @@ export const requireRole = (roles: string[]) => {
 
     next();
   };
+};
+
+// Middleware optimizado para verificación rápida de admin
+export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Usuario no autenticado' });
+  }
+
+  if (req.user.rol !== 'admin') {
+    return res.status(403).json({ error: 'Se requieren permisos de administrador' });
+  }
+
+  next();
 };

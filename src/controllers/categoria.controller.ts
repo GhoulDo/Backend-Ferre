@@ -1,13 +1,20 @@
 import { Request, Response } from 'express';
 import { CategoriaService } from '../services/categoria.service';
+import { logger } from '../utils/logger';
 
 export class CategoriaController {
   static async getAll(req: Request, res: Response) {
     try {
-      const categorias = await CategoriaService.getAll();
+      const { simple } = req.query;
+      
+      // Si solo se necesitan nombres (para dropdowns), usar método optimizado
+      const categorias = simple === 'true' 
+        ? await CategoriaService.getAllSimple()
+        : await CategoriaService.getAll();
+      
       res.json(categorias);
     } catch (error) {
-      console.error('Error al obtener categorías:', error);
+      logger.error('Error al obtener categorías', { error, user: req.user?.userId });
       res.status(500).json({ error: 'Error al obtener categorías' });
     }
   }
@@ -16,12 +23,14 @@ export class CategoriaController {
     try {
       const { id } = req.params;
       const categoria = await CategoriaService.getById(parseInt(id));
+      
       if (!categoria) {
         return res.status(404).json({ error: 'Categoría no encontrada' });
       }
+      
       res.json(categoria);
     } catch (error) {
-      console.error('Error al obtener categoría:', error);
+      logger.error('Error al obtener categoría', { error, categoriaId: req.params.id });
       res.status(500).json({ error: 'Error al obtener categoría' });
     }
   }
@@ -29,9 +38,18 @@ export class CategoriaController {
   static async create(req: Request, res: Response) {
     try {
       const categoria = await CategoriaService.create(req.body);
+      logger.info('Categoría creada', { categoriaId: categoria.id, user: req.user?.userId });
       res.status(201).json(categoria);
-    } catch (error) {
-      console.error('Error al crear categoría:', error);
+    } catch (error: any) {
+      logger.error('Error al crear categoría', { error, data: req.body, user: req.user?.userId });
+      
+      if (error.code === 'P2002') {
+        return res.status(409).json({ 
+          error: 'Ya existe una categoría con ese nombre',
+          field: 'nombre'
+        });
+      }
+      
       res.status(500).json({ error: 'Error al crear categoría' });
     }
   }
@@ -40,9 +58,22 @@ export class CategoriaController {
     try {
       const { id } = req.params;
       const categoria = await CategoriaService.update(parseInt(id), req.body);
+      logger.info('Categoría actualizada', { categoriaId: id, user: req.user?.userId });
       res.json(categoria);
-    } catch (error) {
-      console.error('Error al actualizar categoría:', error);
+    } catch (error: any) {
+      logger.error('Error al actualizar categoría', { error, categoriaId: req.params.id });
+      
+      if (error.code === 'P2002') {
+        return res.status(409).json({ 
+          error: 'Ya existe una categoría con ese nombre',
+          field: 'nombre'
+        });
+      }
+      
+      if (error.code === 'P2025') {
+        return res.status(404).json({ error: 'Categoría no encontrada' });
+      }
+      
       res.status(500).json({ error: 'Error al actualizar categoría' });
     }
   }
@@ -51,9 +82,22 @@ export class CategoriaController {
     try {
       const { id } = req.params;
       await CategoriaService.delete(parseInt(id));
+      logger.info('Categoría eliminada', { categoriaId: id, user: req.user?.userId });
       res.json({ message: 'Categoría eliminada correctamente' });
-    } catch (error) {
-      console.error('Error al eliminar categoría:', error);
+    } catch (error: any) {
+      logger.error('Error al eliminar categoría', { error, categoriaId: req.params.id });
+      
+      if (error.message.includes('productos asociados')) {
+        return res.status(400).json({ 
+          error: error.message,
+          code: 'CATEGORY_HAS_PRODUCTS'
+        });
+      }
+      
+      if (error.code === 'P2025') {
+        return res.status(404).json({ error: 'Categoría no encontrada' });
+      }
+      
       res.status(500).json({ error: 'Error al eliminar categoría' });
     }
   }
