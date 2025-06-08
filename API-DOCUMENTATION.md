@@ -1,6 +1,7 @@
 # 📚 DOCUMENTACIÓN COMPLETA API FERRETERÍA
 
 **Base URL:** `https://backend-ferre.onrender.com`
+**Frontend URL:** `https://v0-ferreteria-frontend.vercel.app`
 
 ---
 
@@ -125,19 +126,7 @@
 ```json
 {
   "nombre": "Ana Rodriguez Martinez",
-  "correo": "ana.rodriguez@ferreteria.com",
   "rol": "admin"
-}
-```
-
-**Response 200:**
-```json
-{
-  "id": 3,
-  "nombre": "Ana Rodriguez Martinez",
-  "correo": "ana.rodriguez@ferreteria.com",
-  "rol": "admin",
-  "activo": true
 }
 ```
 
@@ -188,21 +177,6 @@
     "categoria": {
       "id": 1,
       "nombre": "Herramientas"
-    }
-  },
-  {
-    "id": 2,
-    "nombre": "Tornillos Autoperforantes 1/2\"",
-    "descripcion": "Caja x100 unidades, acero galvanizado",
-    "precioVenta": 8.50,
-    "stockActual": 3,
-    "stockMinimo": 10,
-    "activo": true,
-    "createdAt": "2024-01-15T11:00:00.000Z",
-    "categoriaId": 2,
-    "categoria": {
-      "id": 2,
-      "nombre": "Tornillos y Clavos"
     }
   }
 ]
@@ -334,12 +308,9 @@
   {
     "id": 2,
     "nombre": "Tornillos Autoperforantes 1/2\"",
-    "descripcion": "Caja x100 unidades, acero galvanizado",
     "precioVenta": 8.50,
     "stockActual": 3,
     "stockMinimo": 10,
-    "activo": true,
-    "createdAt": "2024-01-15T11:00:00.000Z",
     "categoria_nombre": "Tornillos y Clavos"
   }
 ]
@@ -407,24 +378,6 @@
         "nombre": "Martillo de Garra 16oz",
         "precioVenta": 25.99,
         "stockActual": 15
-      },
-      {
-        "id": 3,
-        "nombre": "Taladro Inalámbrico 12V",
-        "precioVenta": 89.99,
-        "stockActual": 8
-      }
-    ]
-  },
-  {
-    "id": 2,
-    "nombre": "Tornillos y Clavos",
-    "productos": [
-      {
-        "id": 2,
-        "nombre": "Tornillos Autoperforantes 1/2\"",
-        "precioVenta": 8.50,
-        "stockActual": 3
       }
     ]
   }
@@ -524,13 +477,6 @@
 }
 ```
 
-**Response 200:**
-```json
-{
-  "message": "Categoría eliminada correctamente"
-}
-```
-
 ---
 
 ## 👥 CLIENTES
@@ -544,6 +490,11 @@
   "Authorization": "Bearer YOUR_TOKEN_HERE"
 }
 ```
+
+**Query Parameters:**
+- `search` - Buscar por nombre, correo o teléfono
+- `limit` - Límite de resultados (default: 20)
+- `simple` - Si es "true", retorna solo id, nombre y correo
 
 **Response 200:**
 ```json
@@ -559,21 +510,8 @@
         "id": 1,
         "fecha": "2024-01-15T14:30:00.000Z",
         "total": 34.49
-      },
-      {
-        "id": 3,
-        "fecha": "2024-01-16T10:15:00.000Z",
-        "total": 89.99
       }
     ]
-  },
-  {
-    "id": 2,
-    "nombre": "María González",
-    "correo": "maria.gonzalez@email.com",
-    "telefono": "+1234567891",
-    "direccion": "Avenida Central 456, Ciudad",
-    "ventas": []
   }
 ]
 ```
@@ -691,8 +629,8 @@
 }
 ```
 
-### Eliminar Cliente (Admin)
-**DELETE** `/api/clientes/:id`
+### Estadísticas de Clientes (Admin)
+**GET** `/api/clientes/stats`
 
 **Headers:**
 ```json
@@ -704,7 +642,19 @@
 **Response 200:**
 ```json
 {
-  "message": "Cliente eliminado correctamente"
+  "totalClientes": 50,
+  "clientesConVentas": 35,
+  "clientesSinVentas": 15
+}
+```
+
+### Eliminar Cliente (Admin)
+**DELETE** `/api/clientes/:id`
+
+**Headers:**
+```json
+{
+  "Authorization": "Bearer YOUR_TOKEN_HERE"
 }
 ```
 
@@ -752,18 +702,6 @@
           "id": 1,
           "nombre": "Martillo de Garra 16oz",
           "precioVenta": 25.99
-        }
-      },
-      {
-        "id": 2,
-        "ventaId": 1,
-        "productoId": 2,
-        "cantidad": 1,
-        "precioUnitario": 8.50,
-        "producto": {
-          "id": 2,
-          "nombre": "Tornillos Autoperforantes 1/2\"",
-          "precioVenta": 8.50
         }
       }
     ]
@@ -813,18 +751,6 @@
         "nombre": "Martillo de Garra 16oz",
         "precioVenta": 25.99
       }
-    },
-    {
-      "id": 2,
-      "ventaId": 1,
-      "productoId": 2,
-      "cantidad": 1,
-      "precioUnitario": 8.50,
-      "producto": {
-        "id": 2,
-        "nombre": "Tornillos Autoperforantes 1/2\"",
-        "precioVenta": 8.50
-      }
     }
   ]
 }
@@ -841,7 +767,7 @@
 }
 ```
 
-**Request Body:**
+**Request Body con Cliente:**
 ```json
 {
   "clienteId": 1,
@@ -860,57 +786,7 @@
 }
 ```
 
-**Response 201:**
-```json
-{
-  "id": 4,
-  "fecha": "2024-01-16T15:45:00.000Z",
-  "total": 141.97,
-  "clienteId": 1,
-  "cliente": {
-    "id": 1,
-    "nombre": "Juan Pérez",
-    "correo": "juan.perez@email.com"
-  },
-  "usuarioId": 2,
-  "usuario": {
-    "id": 2,
-    "nombre": "Carlos Vendedor",
-    "correo": "carlos.vendedor@ferreteria.com"
-  },
-  "detalles": [
-    {
-      "id": 7,
-      "ventaId": 4,
-      "productoId": 1,
-      "cantidad": 2,
-      "precioUnitario": 25.99,
-      "producto": {
-        "id": 1,
-        "nombre": "Martillo de Garra 16oz",
-        "precioVenta": 25.99
-      }
-    },
-    {
-      "id": 8,
-      "ventaId": 4,
-      "productoId": 3,
-      "cantidad": 1,
-      "precioUnitario": 89.99,
-      "producto": {
-        "id": 3,
-        "nombre": "Taladro Inalámbrico 12V",
-        "precioVenta": 89.99
-      }
-    }
-  ]
-}
-```
-
-### Venta sin Cliente (Venta Rápida)
-**POST** `/api/ventas`
-
-**Request Body:**
+**Request Body sin Cliente (Venta Rápida):**
 ```json
 {
   "detalles": [
@@ -918,37 +794,6 @@
       "productoId": 2,
       "cantidad": 5,
       "precioUnitario": 8.50
-    }
-  ]
-}
-```
-
-**Response 201:**
-```json
-{
-  "id": 5,
-  "fecha": "2024-01-16T16:00:00.000Z",
-  "total": 42.50,
-  "clienteId": null,
-  "cliente": null,
-  "usuarioId": 2,
-  "usuario": {
-    "id": 2,
-    "nombre": "Carlos Vendedor",
-    "correo": "carlos.vendedor@ferreteria.com"
-  },
-  "detalles": [
-    {
-      "id": 9,
-      "ventaId": 5,
-      "productoId": 2,
-      "cantidad": 5,
-      "precioUnitario": 8.50,
-      "producto": {
-        "id": 2,
-        "nombre": "Tornillos Autoperforantes 1/2\"",
-        "precioVenta": 8.50
-      }
     }
   ]
 }
@@ -983,37 +828,9 @@
 }
 ```
 
-**Response 200:**
-```json
-[
-  {
-    "id": 1,
-    "fecha": "2024-01-15T14:30:00.000Z",
-    "total": 34.49,
-    "cliente": {
-      "id": 1,
-      "nombre": "Juan Pérez"
-    },
-    "usuario": {
-      "id": 1,
-      "nombre": "Administrador"
-    }
-  },
-  {
-    "id": 4,
-    "fecha": "2024-01-16T15:45:00.000Z",
-    "total": 141.97,
-    "cliente": {
-      "id": 1,
-      "nombre": "Juan Pérez"
-    },
-    "usuario": {
-      "id": 2,
-      "nombre": "Carlos Vendedor"
-    }
-  }
-]
-```
+**Query Parameters:**
+- `fechaInicio` - Fecha de inicio (formato: YYYY-MM-DD)
+- `fechaFin` - Fecha de fin (formato: YYYY-MM-DD)
 
 ---
 
@@ -1119,10 +936,78 @@
 ```json
 {
   "pong": true,
-  "timestamp": "2024-01-16T10:30:00.000Z",
+  "timestamp": 1705394400000,
   "uptime": 86400
 }
 ```
+
+### Información de la API
+**GET** `/`
+
+**Response 200:**
+```json
+{
+  "api": "Backend Ferretería API",
+  "version": "1.0.0",
+  "status": "running",
+  "endpoints": {
+    "health": "/health",
+    "productos": "/api/productos",
+    "categorias": "/api/categorias",
+    "clientes": "/api/clientes",
+    "usuarios": "/api/usuarios",
+    "ventas": "/api/ventas",
+    "sistema": "/api/sistema"
+  }
+}
+```
+
+---
+
+## 🔒 RESUMEN DE RUTAS POR MÓDULO
+
+### **Productos** (`/api/productos`)
+- `GET /` - Listar productos
+- `GET /stats` - Estadísticas (Admin)
+- `GET /low-stock` - Productos con stock bajo
+- `GET /:id` - Obtener por ID
+- `POST /` - Crear (Admin)
+- `PUT /:id` - Actualizar (Admin)
+- `DELETE /:id` - Eliminar (Admin)
+
+### **Categorías** (`/api/categorias`)
+- `GET /` - Listar categorías
+- `GET /:id` - Obtener por ID
+- `POST /` - Crear (Admin)
+- `PUT /:id` - Actualizar (Admin)
+- `DELETE /:id` - Eliminar (Admin)
+
+### **Clientes** (`/api/clientes`)
+- `GET /` - Listar clientes (con filtros)
+- `GET /stats` - Estadísticas (Admin)
+- `GET /:id` - Obtener por ID
+- `POST /` - Crear cliente
+- `PUT /:id` - Actualizar cliente
+- `DELETE /:id` - Eliminar cliente (Admin)
+
+### **Usuarios** (`/api/usuarios`)
+- `POST /login` - Iniciar sesión
+- `GET /` - Listar usuarios (Admin)
+- `POST /` - Crear usuario (Admin)
+- `PUT /:id` - Actualizar usuario (Admin)
+- `DELETE /:id` - Eliminar usuario (Admin)
+
+### **Ventas** (`/api/ventas`)
+- `GET /` - Listar ventas
+- `GET /stats` - Estadísticas (Admin)
+- `GET /range` - Ventas por rango de fechas
+- `GET /:id` - Obtener por ID
+- `POST /` - Crear venta
+
+### **Sistema** (`/api/sistema`)
+- `GET /stats` - Estadísticas del servidor (Admin)
+- `GET /keep-alive/status` - Estado keep-alive (Admin)
+- `POST /keep-alive/ping` - Ping manual (Admin)
 
 ---
 
@@ -1186,14 +1071,87 @@
 
 ## 📝 NOTAS IMPORTANTES
 
-1. **Autenticación:** Todas las rutas (excepto `/health`, `/ping` y `/api/usuarios/login`) requieren token JWT
+1. **Autenticación:** Todas las rutas (excepto `/health`, `/ping`, `/` y `/api/usuarios/login`) requieren token JWT
 2. **Autorización:** Las rutas marcadas con (Admin) solo son accesibles por usuarios con rol "admin"
 3. **Stock:** Al crear ventas, el stock se actualiza automáticamente
 4. **Timestamps:** Todas las fechas están en formato ISO 8601 UTC
 5. **Precios:** Números decimales con máximo 2 decimales
 6. **Soft Delete:** Los productos se marcan como inactivos en lugar de eliminarse
 7. **Validaciones:** Todos los campos requeridos se validan en el backend
+8. **Rate Limiting:** En producción hay limitaciones de velocidad para prevenir spam
+9. **CORS:** Configurado para permitir requests desde dominios autorizados
+10. **Keep-Alive:** Sistema automático para mantener el servicio activo en Render
 
 ---
 
 **🚀 ¡API Lista para usar en tu frontend!**
+
+**URL de Producción:** `https://backend-ferre.onrender.com`
+**Frontend Desplegado:** `https://v0-ferreteria-frontend.vercel.app`
+**Credenciales de Prueba:** `admin@ferreteria.com` / `admin123`
+
+## 🔗 INTEGRACIÓN FRONTEND-BACKEND
+
+### **Configuración para tu Frontend:**
+
+```typescript
+// En tu frontend, configurar la URL base de la API:
+const API_BASE_URL = 'https://backend-ferre.onrender.com';
+
+// Ejemplo de configuración de Axios:
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'https://backend-ferre.onrender.com',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor para agregar token automáticamente
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+```
+
+### **Ejemplo de Login desde tu Frontend:**
+
+```typescript
+// Función de login para tu frontend
+const login = async (correo: string, contrasena: string) => {
+  try {
+    const response = await fetch('https://backend-ferre.onrender.com/api/usuarios/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ correo, contrasena }),
+    });
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      // Guardar token y usuario
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('usuario', JSON.stringify(data.usuario));
+      return data;
+    } else {
+      throw new Error(data.error || 'Error de autenticación');
+    }
+  } catch (error) {
+    console.error('Error en login:', error);
+    throw error;
+  }
+};
+```
+
+### **CORS Configurado para:**
+✅ `https://v0-ferreteria-frontend.vercel.app` (tu frontend)
+✅ Todos los dominios `*.vercel.app`
+✅ Credenciales habilitadas (`credentials: true`)
+✅ Métodos: GET, POST, PUT, DELETE, OPTIONS
+✅ Headers: Content-Type, Authorization, X-Requested-With

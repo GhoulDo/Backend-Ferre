@@ -53,10 +53,17 @@ const corsOptions = {
     ? [
         'https://backend-ferre.onrender.com',
         'https://frontend-ferre.onrender.com',
+        'https://v0-ferreteria-frontend.vercel.app', // ✅ Tu frontend desplegado
         /\.onrender\.com$/,
-        /\.vercel\.app$/
+        /\.vercel\.app$/,
+        /\.netlify\.app$/
       ]
-    : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:8080'],
+    : [
+        'http://localhost:3000', 
+        'http://localhost:5173', 
+        'http://localhost:8080',
+        'http://localhost:4000'
+      ],
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
