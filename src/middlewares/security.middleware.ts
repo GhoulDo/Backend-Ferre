@@ -78,3 +78,10 @@ export const validateNumericParam = (paramName: string) => {
     next();
   };
 };
+
+// Middleware de seguridad
+export const securityMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  // Implementar lógica de seguridad, como verificación de tokens, roles de usuario, etc.
+  
+  next();
+};

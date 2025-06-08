@@ -1,19 +1,22 @@
 import { Router } from 'express';
 import { CategoriaController } from '../controllers/categoria.controller';
-import { authenticateToken, requireAdmin } from '../middlewares/auth.middleware';
+import { authenticateToken, requireRole } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validation.middleware';
 import { validateNumericParam } from '../middlewares/security.middleware';
 import { CategoriaSchema } from '../utils/schemas';
 
 const router = Router();
 
-// Rutas públicas (requieren autenticación básica)
-router.get('/', authenticateToken, CategoriaController.getAll);
-router.get('/:id', authenticateToken, validateNumericParam('id'), CategoriaController.getById);
+// Todas las rutas requieren autenticación
+router.use(authenticateToken);
 
-// Rutas de administrador
-router.post('/', authenticateToken, requireAdmin, validate(CategoriaSchema), CategoriaController.create);
-router.put('/:id', authenticateToken, requireAdmin, validateNumericParam('id'), validate(CategoriaSchema.partial()), CategoriaController.update);
-router.delete('/:id', authenticateToken, requireAdmin, validateNumericParam('id'), CategoriaController.delete);
+// Rutas públicas (para vendedores y admins)
+router.get('/', CategoriaController.getAll);
+router.get('/:id', validateNumericParam('id'), CategoriaController.getById);
+
+// Rutas solo para admins
+router.post('/', requireRole(['admin']), validate(CategoriaSchema), CategoriaController.create);
+router.put('/:id', requireRole(['admin']), validateNumericParam('id'), validate(CategoriaSchema), CategoriaController.update);
+router.delete('/:id', requireRole(['admin']), validateNumericParam('id'), CategoriaController.delete);
 
 export default router;

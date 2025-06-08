@@ -56,15 +56,7 @@ export class CategoriaService {
       include: {
         productos: {
           where: { activo: true },
-          select: {
-            id: true,
-            nombre: true,
-            descripcion: true,
-            precioVenta: true,
-            stockActual: true,
-            stockMinimo: true,
-            activo: true
-          }
+          orderBy: { nombre: 'asc' }
         }
       }
     });
@@ -75,30 +67,39 @@ export class CategoriaService {
     return categoria;
   }
 
-  static async create(data: any) {
+  static async create(data: { nombre: string }) {
     this.cache.clear();
     return await prisma.categoria.create({
       data,
-      include: { productos: true }
+      include: {
+        productos: true
+      }
     });
   }
 
-  static async update(id: number, data: any) {
+  static async update(id: number, data: { nombre: string }) {
     this.cache.clear();
     return await prisma.categoria.update({
       where: { id },
       data,
-      include: { productos: true }
+      include: {
+        productos: {
+          where: { activo: true }
+        }
+      }
     });
   }
 
   static async delete(id: number) {
     // Verificar si tiene productos asociados
-    const productCount = await prisma.producto.count({
-      where: { categoriaId: id, activo: true }
+    const productosCount = await prisma.producto.count({
+      where: {
+        categoriaId: id,
+        activo: true
+      }
     });
 
-    if (productCount > 0) {
+    if (productosCount > 0) {
       throw new Error('No se puede eliminar la categoría porque tiene productos asociados');
     }
 
